@@ -204,7 +204,8 @@ function glow(wx, wy, wz, r, col, alpha) {
 
 // Simple isometric worker figure
 // wx, wy = world foot position; helmetCol = hard-hat color
-function drawWorker(wx, wy, helmetCol, walkPhase) {
+function drawWorker(wx, wy, helmetCol, walkPhase, baseZ = 0) {
+  const part = (x, y, z, ...shape) => bx(x, y, z + baseZ, ...shape);
   helmetCol = helmetCol || '#ff8800';
   walkPhase = (walkPhase !== undefined) ? walkPhase : 0;
 
@@ -221,37 +222,37 @@ function drawWorker(wx, wy, helmetCol, walkPhase) {
   const sC = '#d4916a', sL = '#aa6a40', sR = '#c07c54';  // skin
 
   // ── LEFT LEG ──
-  bx(wx+0.03, wy+0.055-sw, 0.00, 0.11, 0.09, 0.30, pC, pL, pR);
+  part(wx+0.03, wy+0.055-sw, 0.00, 0.11, 0.09, 0.30, pC, pL, pR);
   // left boot
-  bx(wx+0.01, wy+0.045-sw, 0.00, 0.14, 0.11, 0.07, bC, bL, bR);
-  bx(wx+0.01, wy+0.045-sw, 0.07, 0.07, 0.10, 0.04, bC, bL, bR);  // boot toe cap
+  part(wx+0.01, wy+0.045-sw, 0.00, 0.14, 0.11, 0.07, bC, bL, bR);
+  part(wx+0.01, wy+0.045-sw, 0.07, 0.07, 0.10, 0.04, bC, bL, bR);  // boot toe cap
 
   // ── RIGHT LEG ──
-  bx(wx+0.17, wy+0.055+sw, 0.00, 0.11, 0.09, 0.30, pC, pL, pR);
+  part(wx+0.17, wy+0.055+sw, 0.00, 0.11, 0.09, 0.30, pC, pL, pR);
   // right boot
-  bx(wx+0.15, wy+0.045+sw, 0.00, 0.14, 0.11, 0.07, bC, bL, bR);
-  bx(wx+0.15, wy+0.045+sw, 0.07, 0.07, 0.10, 0.04, bC, bL, bR);
+  part(wx+0.15, wy+0.045+sw, 0.00, 0.14, 0.11, 0.07, bC, bL, bR);
+  part(wx+0.15, wy+0.045+sw, 0.07, 0.07, 0.10, 0.04, bC, bL, bR);
 
   // ── TORSO  (hi-vis vest over work shirt) ──
-  bx(wx-0.01, wy+0.02, 0.30, 0.33, 0.20, 0.42, vC, vL, vR);
+  part(wx-0.01, wy+0.02, 0.30, 0.33, 0.20, 0.42, vC, vL, vR);
 
   // ── LEFT ARM  (jacket sleeve + hand) ──
-  bx(wx-0.11, wy+0.03+sw, 0.52, 0.09, 0.08, 0.30, jC, jL, jR);
-  bx(wx-0.10, wy+0.025+sw, 0.52, 0.08, 0.07, 0.07, sC, sL, sR);  // hand
+  part(wx-0.11, wy+0.03+sw, 0.52, 0.09, 0.08, 0.30, jC, jL, jR);
+  part(wx-0.10, wy+0.025+sw, 0.52, 0.08, 0.07, 0.07, sC, sL, sR);  // hand
 
   // ── RIGHT ARM ──
-  bx(wx+0.33, wy+0.03-sw, 0.52, 0.09, 0.08, 0.30, jC, jL, jR);
-  bx(wx+0.32, wy+0.025-sw, 0.52, 0.08, 0.07, 0.07, sC, sL, sR);  // hand
+  part(wx+0.33, wy+0.03-sw, 0.52, 0.09, 0.08, 0.30, jC, jL, jR);
+  part(wx+0.32, wy+0.025-sw, 0.52, 0.08, 0.07, 0.07, sC, sL, sR);  // hand
 
   // ── NECK ──
-  bx(wx+0.10, wy+0.055, 0.72, 0.11, 0.09, 0.09, sC, sL, sR);
+  part(wx+0.10, wy+0.055, 0.72, 0.11, 0.09, 0.09, sC, sL, sR);
 
   // ── HEAD ──
-  bx(wx+0.04, wy+0.038, 0.81, 0.23, 0.16, 0.22, sC, sL, sR);
+  part(wx+0.04, wy+0.038, 0.81, 0.23, 0.16, 0.22, sC, sL, sR);
 
   // ── HARD HAT  (wide brim + dome) ──
-  bx(wx+0.00, wy+0.020, 1.01, 0.30, 0.20, 0.07, helmetCol, hL, hR);  // brim
-  bx(wx+0.04, wy+0.030, 1.07, 0.21, 0.14, 0.08, helmetCol, hL, hR);  // dome
+  part(wx+0.00, wy+0.020, 1.01, 0.30, 0.20, 0.07, helmetCol, hL, hR);  // brim
+  part(wx+0.04, wy+0.030, 1.07, 0.21, 0.14, 0.08, helmetCol, hL, hR);  // dome
 }
 function shadeHex(hex, amt) {
   const r = Math.max(0,Math.min(255,parseInt(hex.slice(1,3),16)+amt));
@@ -315,7 +316,6 @@ function tStr() {
 // Higher (wx+wy) → lower on screen → closer/front
 // Lower (wx+wy)  → higher on screen → further/back
 //
-// So: LINE_Y = 14 (front), WH_Y0 = 4 (back) ✓
 
 const LINE_Y   = 14;
 const UC_X     = -0.5;  // Uncoiler (feeds steel coil)
@@ -326,11 +326,20 @@ const PO_X     = 13.5;  // Pay-off Table (出料台, after Flying Saw)
 const BS_X     = 17.5;  // Bundle / Pack / Strap Station (combined)
 
 const WH_X0    = 3.5;
-const WH_Y0    = 3.5;
+const WH_Y0    = 5.35;
 const WH_COLS  = 9;
-const WH_ROWS  = 4;
+const WH_LEVELS = 4;
 const WH_CW    = 1.6;   // cell width (along x)
-const WH_CD    = 1.3;   // cell depth (along y)
+const WH_CD    = 1.25;  // shared rack depth
+const WH_LEVEL_HEIGHT = 0.7;
+const WH_OUTBOUND_Y = WH_Y0 - 0.85;
+const WH_INBOUND_Y = WH_Y0 + WH_CD + 0.85;
+const INBOUND_LANE_Y = 10.6;
+const OUTBOUND_LANE_Y = 3.35;
+const EAST_LANE_X = 19.25;
+const INBOUND_HOME = { x: 17.2, y: 12.6 };
+const OUTBOUND_HOME = { x: EAST_LANE_X, y: OUTBOUND_LANE_Y };
+const inbound = { ...INBOUND_HOME, facing: 'south', cargo: null, forkZ: 0.34, route: [] };
 
 const PIECES_PER_BUNDLE = 7;
 const ORDER_SIZE = 12;
@@ -342,11 +351,10 @@ const BUNDLE_HEIGHT = 0.36;
 const DOCK_X = 20.5;
 const DOCK_Y = 6;
 const ROAD_START_Y = -16;
-const SHIPPING_AISLE_Y = 9.5;
 const shipping = {
   phase: 'waiting', nextOrder: 2, order: 0, shipped: 0, loaded: 0,
   truckY: ROAD_START_Y, pending: [], route: [],
-  lift: { x: 18.8, y: SHIPPING_AISLE_Y, carrying: false, facesDock: false },
+  lift: { ...OUTBOUND_HOME, facing: 'south', carrying: false, forkZ: 0.34 },
 };
 
 // ── Pre-fill warehouse with opening inventory (~64% of capacity) ──
@@ -358,7 +366,7 @@ const INIT_WH = 23;  // 36 slots total → 23 ≈ 64%
     bundles.push({
       state: 'stored',
       x: WH_X0 + col * WH_CW + WH_CW / 2,
-      y: WH_Y0 + row * WH_CD + WH_CD / 2,
+      y: WH_Y0 + WH_CD / 2,
       whCol: col,
       whRow: row,
     });
@@ -377,7 +385,7 @@ function drawFloor() {
   for (let fy = 0; fy <= 18; fy++) {
     for (let fx = -1; fx <= 24; fx++) {
       let c;
-      const inWH = fy >= WH_Y0-1 && fy <= WH_Y0+WH_ROWS*WH_CD+1
+      const inWH = fy >= WH_Y0-1 && fy <= WH_Y0+WH_CD+1
                 && fx >= WH_X0-1 && fx <= WH_X0+WH_COLS*WH_CW+1;
       const inPK = fy >= LINE_Y-1 && fy <= LINE_Y+1.5 && fx >= BS_X-1 && fx <= BS_X+3.5;
       const inLN = fy >= LINE_Y-1 && fy <= LINE_Y+1.5 && fx >= 0 && fx <= 17;
@@ -420,7 +428,26 @@ function drawFloor() {
   ctx.restore();
 
   // Zone labels embedded in floor
-  lbl(WH_X0+WH_COLS*WH_CW/2, WH_Y0+WH_ROWS*WH_CD/2, 0.01, 'FINISHED GOODS WAREHOUSE', 'rgba(60,140,220,0.28)', 11);
+  ctx.save();
+  ctx.setLineDash([7, 5]);
+  for (const [points, color] of [
+    [[[4.3, INBOUND_LANE_Y], [INBOUND_HOME.x, INBOUND_LANE_Y], [INBOUND_HOME.x, INBOUND_HOME.y]], '#51a9ed'],
+    [[[4.3, OUTBOUND_LANE_Y], [EAST_LANE_X, OUTBOUND_LANE_Y], [EAST_LANE_X, 12.8]], '#e9af50'],
+  ]) {
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = 0.48;
+    ctx.lineWidth = 2;
+    points.forEach(([x, y], i) => {
+      const pt = iso(x, y, 0.01);
+      if (i === 0) ctx.moveTo(pt.x, pt.y);
+      else ctx.lineTo(pt.x, pt.y);
+    });
+    ctx.stroke();
+  }
+  ctx.restore();
+  lbl(8, INBOUND_LANE_Y + 0.42, 0.01, 'INBOUND FORKLIFT', '#68b8f0', 9);
+  lbl(8, OUTBOUND_LANE_Y - 0.42, 0.01, 'OUTBOUND FORKLIFT', '#e9af50', 9);
   lbl(BS_X+1.4, LINE_Y+0.6, 0.01, 'BUNDLE / PACK', 'rgba(60,200,120,0.28)', 10);
   lbl(8, LINE_Y+0.5, 0.01, 'LINE 35  —  DUCTMATE FLANGE 35', 'rgba(80,160,230,0.28)', 10);
 }
@@ -770,36 +797,34 @@ function drawBundlePackStation() {
 }
 
 // ---- WAREHOUSE ----
+function storageDeck(level) {
+  return 0.15 + level * WH_LEVEL_HEIGHT;
+}
+
 function drawWarehouse() {
-  const x = WH_X0, y = WH_Y0;
-  // Back and left walls
-  bx(x-0.3, y-0.3, 0, WH_COLS*WH_CW+0.6, 0.3, 3.2, '#111c2a','#0a1420','#0f1826');
-  bx(x-0.3, y-0.3, 0, 0.3, WH_ROWS*WH_CD+0.6, 3.2, '#111c2a','#0a1420','#0f1826');
-
+  // The same rack bays are accessible from opposing aisles.
   for (let col = 0; col < WH_COLS; col++) {
-    for (let row = 0; row < WH_ROWS; row++) {
-      const rx = x + col * WH_CW;
-      const ry = y + row * WH_CD;
-      // Upright posts
-      bx(rx, ry, 0, 0.1, 0.1, 2.8, '#283848','#1e2e3c','#223444');
-      bx(rx+WH_CW-0.1, ry, 0, 0.1, 0.1, 2.8, '#283848','#1e2e3c','#223444');
-      // Shelf beam (lower shelf)
-      bx(rx, ry, 0.95, WH_CW, 0.07, 0.07, '#1e3050','#142440','#1a2c48');
-      // Shelf beam (upper shelf)
-      bx(rx, ry, 1.98, WH_CW, 0.07, 0.07, '#1e3050','#142440','#1a2c48');
-
-      // Check if there is a stored bundle in this cell
-      const hasL = bundles.find(b => b.state==='stored' && b.whCol===col && b.whRow===row);
-      if (hasL) {
-        // Lower-shelf bundle
-        bx(rx+0.1, ry+0.04, 0, WH_CW-0.2, WH_CD-0.1, 0.42, '#8aacba','#6a8c9a','#7a9caa');
-        bx(rx+0.3, ry+0.04, 0.3, 0.14, WH_CD-0.1, 0.17, '#d05808','#a04800','#b85005');
-        bx(rx+WH_CW-0.5, ry+0.04, 0.3, 0.14, WH_CD-0.1, 0.17, '#d05808','#a04800','#b85005');
+    const x = WH_X0 + col * WH_CW;
+    for (let level = 0; level < WH_LEVELS; level++) {
+      const z = storageDeck(level);
+      bx(x, WH_Y0, z - 0.08, WH_CW, WH_CD, 0.08, '#293e56', '#142438', '#21334a');
+      const occupied = bundles.some(b => b.state === 'stored' && b.whCol === col && b.whRow === level);
+      if (!occupied) continue;
+      bx(x + 0.22, WH_Y0 + 0.12, z, WH_CW - 0.44, WH_CD - 0.24, BUNDLE_HEIGHT,
+        '#8aacba', '#6a8c9a', '#7a9caa');
+      for (const band of [0.42, WH_CW - 0.54]) {
+        bx(x + band, WH_Y0 + 0.12, z, 0.12, WH_CD - 0.24, BUNDLE_HEIGHT,
+          '#d05808', '#a04800', '#b85005');
       }
+    }
+    for (const y of [WH_Y0, WH_Y0 + WH_CD - 0.09]) {
+      bx(x, y, 0, 0.09, 0.09, 2.8, '#42617a', '#283d50', '#354c64');
+      bx(x + WH_CW - 0.09, y, 0, 0.09, 0.09, 2.8, '#42617a', '#283d50', '#354c64');
     }
   }
 
-  lbl(x + WH_COLS*WH_CW/2, y-0.6, 3.5, 'FINISHED GOODS WAREHOUSE — DUCTMATE 35', '#4ab8e8', 10);
+  lbl(WH_X0 + WH_COLS * WH_CW / 2, WH_Y0 + WH_CD / 2, 3.1,
+    'FINISHED GOODS WAREHOUSE — DUCTMATE 35', '#4ab8e8', 10);
 }
 
 // ---- CEILING LIGHTS ----
@@ -913,7 +938,7 @@ function drawShippingDock() {
   for (let y = -8; y <= 11; y++) {
     bx(DOCK_X + 2.4, y, 0, 0.05, 0.52, 0.02, '#dbb84c', '#a98d33', '#ba9a38');
   }
-  bx(DOCK_X - 1.05, SHIPPING_AISLE_Y + 0.55, 0, 0.95, 0.12, 0.07, '#e0b03b', '#aa8226', '#c2932b');
+  bx(DOCK_X - 1.05, 12.95, 0, 0.95, 0.12, 0.07, '#e0b03b', '#aa8226', '#c2932b');
   lbl(DOCK_X + 0.75, 11.8, 0.05, 'SHIP-OUT DOCK', '#f0c264', 10);
 }
 
@@ -947,54 +972,35 @@ function drawShippingTruck() {
   lbl(x + 0.9, y + 2.4, 2.2, `ORDER #${shipping.order} · ${shipping.loaded}/${ORDER_SIZE}`, '#ffd67b', 10);
 }
 
-function drawShippingForklift() {
-  if (shipping.phase !== 'loading') return;
-  const { x, y, carrying, facesDock } = shipping.lift;
-  const forkBox = (offset, dy, z, w, d, h, ...colors) =>
-    bx(x + (facesDock ? -offset - w : offset), y + dy, z, w, d, h, ...colors);
-  forkBox(-0.35, -0.3, 0.05, 0.9, 0.64, 0.48, '#d6ac29', '#9c7412', '#b98e1a');
-  forkBox(-0.48, -0.26, 0.48, 0.13, 0.49, 1.12, '#e8bb38', '#a77d17', '#c39826');
-  const liftHeight = facesDock ? Math.floor(shipping.loaded / TRUCK_CARGO_ROWS) * BUNDLE_HEIGHT : 0;
-  const forkZ = carrying ? 0.72 + liftHeight : 0.34;
-  for (const dy of [-0.19, 0.14]) {
-    forkBox(-1.18, dy, forkZ, 0.73, 0.08, 0.08, '#aab8c6', '#64768b', '#8596a7');
+function drawForklift(lift, carrying, outbound) {
+  const { x, y, facing, forkZ } = lift;
+  const forkBox = (forward, side, z, length, width, height, ...colors) => {
+    if (facing === 'east' || facing === 'west') {
+      const offsetX = facing === 'west' ? -forward - length : forward;
+      bx(x + offsetX, y + side, z, length, width, height, ...colors);
+    } else {
+      const offsetY = facing === 'north' ? -forward - length : forward;
+      bx(x + side, y + offsetY, z, width, length, height, ...colors);
+    }
+  };
+  const body = outbound ? ['#d6ac29', '#9c7412', '#b98e1a'] : ['#48a8df', '#245d8e', '#327ba9'];
+  for (const forward of [-0.38, 0.11]) {
+    for (const side of [-0.35, 0.24]) {
+      forkBox(forward, side, 0.01, 0.24, 0.11, 0.26, '#394553', '#101820', '#222c39');
+    }
+  }
+  forkBox(-0.48, -0.28, 0.12, 0.83, 0.56, 0.34, ...body);
+  forkBox(0.28, -0.25, 0.33, 0.12, 0.5, Math.max(1.1, forkZ - 0.1), ...body);
+  for (const side of [-0.19, 0.12]) {
+    forkBox(0.37, side, forkZ, 0.62, 0.07, 0.08, '#aab8c6', '#64768b', '#8596a7');
   }
   if (carrying) {
-    forkBox(-1.3, -0.24, forkZ + 0.08, 0.84, 0.48, 0.36, '#8aacba', '#6a8c9a', '#7a9caa');
-    for (const offset of [-1.15, -0.68]) {
-      forkBox(offset, -0.24, forkZ + 0.08, 0.1, 0.48, 0.37, '#e06010', '#b04800', '#cc5408');
+    forkBox(0.45, -0.27, forkZ + 0.08, 0.58, 0.54, BUNDLE_HEIGHT, '#8aacba', '#6a8c9a', '#7a9caa');
+    for (const forward of [0.55, 0.87]) {
+      forkBox(forward, -0.27, forkZ + 0.08, 0.08, 0.54, BUNDLE_HEIGHT, '#e06010', '#b04800', '#cc5408');
     }
   }
-  drawWorker(x - 0.02, y - 0.12, '#ef9b27', 0);
-}
-
-function drawMovingBundles() {
-  bundles.forEach(b => {
-    if (b.state === 'stored') return;
-
-    // 'packaging' state: bundle already drawn inside drawBundlePackStation via pcsAtStation
-    // but we draw strapping progress overlay here when packaging just finished
-    // (nothing extra needed — handled in drawBundlePackStation)
-
-    if (b.state === 'moving') {
-      // Forklift body
-      bx(b.x-0.35, b.y-0.25, 0,    0.75, 0.6,  0.55, '#c0a020','#a08010','#b09018');
-      // Counter-weight rear bump
-      bx(b.x-0.35, b.y+0.3,  0,    0.2,  0.3,  0.45, '#a88c18','#886e08','#9a7e10');
-      // Mast
-      bx(b.x-0.42, b.y-0.15, 0.55, 0.12, 0.38, 1.4,  '#d0b030','#b09020','#c0a028');
-      // Forks
-      bx(b.x-0.65, b.y-0.15, 1.15, 0.26, 0.06, 0.07, '#e0c040','#c0a030','#d0b038');
-      bx(b.x-0.65, b.y+0.14, 1.15, 0.26, 0.06, 0.07, '#e0c040','#c0a030','#d0b038');
-      // Bundle on forks (strapped) — rectangular pack of bars running along X
-      bx(b.x-0.68, b.y-0.28, 1.22, 1.15, 0.38, 0.38, '#8aacba','#6a8c9a','#7a9caa');
-      // Two strapping bands
-      bx(b.x-0.28, b.y-0.28, 1.22, 0.1,  0.38, 0.38, '#e06010','#b04800','#cc5408');
-      bx(b.x+0.3,  b.y-0.28, 1.22, 0.1,  0.38, 0.38, '#e06010','#b04800','#cc5408');
-      // Forklift driver (blue hard-hat) – seated, slight rock
-      drawWorker(b.x + 0.1, b.y - 0.1, '#1a66cc', simT * 1.8);
-    }
-  });
+  drawWorker(x - 0.15, y - 0.18, outbound ? '#ef9b27' : '#2f9ed9', 0, 0.26);
 }
 
 // ---- DATA OVERLAY CHIPS ----
@@ -1006,7 +1012,7 @@ function drawDataChips() {
     {wx: RF_X+4.0,              wy: LINE_Y-1.7, wz:0, text:`SPD: ${(1.2*SPD).toFixed(1)} m/s`, col:'#4ad8ff'},
     {wx: FS_X+0.5,              wy: LINE_Y-1.7, wz:0, text:`CUT: ${piecesCut}`,                 col:'#4ad8ff'},
     {wx: BS_X+1.4,              wy: LINE_Y-1.7, wz:0, text:`${pcsAtStation}/${PIECES_PER_BUNDLE} pcs · PKD: ${bundlesPacked}`, col:'#5adc8a'},
-    {wx: WH_X0+WH_COLS*WH_CW/2,wy: WH_Y0-0.7,  wz:0, text:`WH: ${bundlesInWH}/${WH_COLS*WH_ROWS}`, col:'#4ad8ff'},
+    {wx: WH_X0+WH_COLS*WH_CW/2,wy: WH_Y0-0.7,  wz:0, text:`WH: ${bundlesInWH}/${WH_COLS*WH_LEVELS}`, col:'#4ad8ff'},
   ];
   chips.forEach(chip => {
     const p = iso(chip.wx, chip.wy, chip.wz);
@@ -1061,44 +1067,30 @@ function updateShipping(dt) {
   const lift = shipping.lift;
   if (shipping.route.length === 0) {
     const bundle = shipping.pending[0];
-    const pickupX = bundle.x + 1;
     const dockY = DOCK_Y + TRUCK_CARGO_START +
       (shipping.loaded % TRUCK_CARGO_ROWS) * TRUCK_CARGO_SPACING + 0.24;
+    const dockZ = 0.72 + Math.floor(shipping.loaded / TRUCK_CARGO_ROWS) * BUNDLE_HEIGHT;
     shipping.route = [
-      { x: lift.x, y: SHIPPING_AISLE_Y },
-      { x: pickupX, y: SHIPPING_AISLE_Y },
-      { x: pickupX, y: bundle.y, action: 'pickup' },
-      { x: pickupX, y: SHIPPING_AISLE_Y },
-      { x: DOCK_X - 1.25, y: SHIPPING_AISLE_Y, action: 'turn' },
-      { x: DOCK_X - 1.25, y: dockY },
-      { x: DOCK_X - 0.95, y: dockY, action: 'load' },
-      { x: DOCK_X - 1.7, y: SHIPPING_AISLE_Y, action: 'clear' },
+      { ...OUTBOUND_HOME },
+      { x: bundle.x, y: OUTBOUND_LANE_Y, travelFacing: 'west', facing: 'south' },
+      { x: bundle.x, y: WH_OUTBOUND_Y, forkZ: storageDeck(bundle.whRow) - 0.08, action: 'pickup' },
+      { x: bundle.x, y: OUTBOUND_LANE_Y, forkZ: 0.34 },
+      { ...OUTBOUND_HOME, travelFacing: 'east' },
+      { x: EAST_LANE_X, y: dockY, travelFacing: 'south', facing: 'east', forkZ: dockZ },
+      { x: DOCK_X - 0.91, y: dockY, action: 'load' },
+      { x: EAST_LANE_X, y: dockY, forkZ: 0.34 },
+      { ...OUTBOUND_HOME, travelFacing: 'north', facing: 'south', action: 'clear' },
     ];
-    lift.facesDock = false;
   }
 
-  const target = shipping.route[0];
-  const dx = target.x - lift.x;
-  const dy = target.y - lift.y;
-  const distance = Math.hypot(dx, dy);
-  const travel = dt * 2.7;
-  if (distance > travel) {
-    lift.x += dx * travel / distance;
-    lift.y += dy * travel / distance;
-    return;
-  }
-  lift.x = target.x;
-  lift.y = target.y;
-  shipping.route.shift();
-
+  const target = advanceForklift(lift, shipping.route, dt, 2.7);
+  if (!target) return;
   if (target.action === 'pickup') {
     const bundle = shipping.pending.shift();
     bundles.splice(bundles.indexOf(bundle), 1);
     bundlesInWH--;
     lift.carrying = true;
     logEv(`Order #${shipping.order} · forklift picked up a bundle`);
-  } else if (target.action === 'turn') {
-    lift.facesDock = true;
   } else if (target.action === 'load') {
     lift.carrying = false;
     shipping.loaded++;
@@ -1108,6 +1100,58 @@ function updateShipping(dt) {
     shipping.phase = 'departing';
     logEv(`Truck departed · order #${shipping.order} shipped (${ORDER_SIZE} bundles)`);
   }
+}
+
+function advanceForklift(lift, route, dt, speed) {
+  const target = route[0];
+  if (!target) return null;
+
+  const dx = target.x - lift.x;
+  const dy = target.y - lift.y;
+  const distance = Math.hypot(dx, dy);
+  const travel = speed * dt;
+  const height = target.forkZ ?? lift.forkZ;
+  const remainingLift = height - lift.forkZ;
+  const liftTravel = 2.0 * dt;
+  lift.forkZ += Math.sign(remainingLift) * Math.min(Math.abs(remainingLift), liftTravel);
+  if (distance > travel) {
+    lift.facing = target.travelFacing ?? lift.facing;
+    lift.x += dx * travel / distance;
+    lift.y += dy * travel / distance;
+    return null;
+  }
+  lift.x = target.x;
+  lift.y = target.y;
+  if (Math.abs(remainingLift) > liftTravel) return null;
+  lift.facing = target.facing ?? lift.facing;
+  return route.shift();
+}
+
+function startInboundDelivery(bundle) {
+  const x = WH_X0 + (bundle.whCol + 0.5) * WH_CW;
+  inbound.cargo = bundle;
+  inbound.facing = 'north';
+  inbound.route = [
+    { x: INBOUND_HOME.x, y: INBOUND_LANE_Y },
+    { x, y: INBOUND_LANE_Y, travelFacing: 'west', facing: 'north' },
+    { x, y: WH_INBOUND_Y, forkZ: storageDeck(bundle.whRow) - 0.08, action: 'store' },
+    { x, y: INBOUND_LANE_Y, forkZ: 0.34 },
+    { x: INBOUND_HOME.x, y: INBOUND_LANE_Y, travelFacing: 'east', facing: 'south' },
+    { ...INBOUND_HOME },
+  ];
+}
+
+function updateInbound(dt) {
+  const target = advanceForklift(inbound, inbound.route, dt, 2.3);
+  if (target?.action !== 'store') return;
+
+  const bundle = inbound.cargo;
+  bundle.state = 'stored';
+  bundle.x = target.x;
+  bundle.y = WH_Y0 + WH_CD / 2;
+  inbound.cargo = null;
+  bundlesInWH++;
+  logEv(`✓ Bundle stored at WH Bay ${bundle.whCol+1}, Level ${bundle.whRow+1}`);
 }
 
 function update(dt) {
@@ -1139,18 +1183,18 @@ function update(dt) {
   sparks = sparks.filter(s => s.life > 0);
 
   updateShipping(dt);
+  updateInbound(dt);
 
   // Reserve a free warehouse bay while the inbound forklift is in transit.
   const nextBundleNeeded = bundlesPacked + 1;
-  if (piecesCut >= nextBundleNeeded * PIECES_PER_BUNDLE && !bundles.some(b => b.state !== 'stored')) {
+  if (piecesCut >= nextBundleNeeded * PIECES_PER_BUNDLE && inbound.route.length === 0 && !bundles.some(b => b.state !== 'stored')) {
     const occupied = new Set(bundles.map(b => b.whRow * WH_COLS + b.whCol));
     let bay = 0;
-    while (bay < WH_ROWS * WH_COLS && occupied.has(bay)) bay++;
-    if (bay < WH_ROWS * WH_COLS) {
+    while (bay < WH_LEVELS * WH_COLS && occupied.has(bay)) bay++;
+    if (bay < WH_LEVELS * WH_COLS) {
       bundles.push({
         state: 'packaging', progress: 0,
-        x: BS_X + 1.4, y: LINE_Y,
-        whCol: bay % WH_COLS,
+          whCol: bay % WH_COLS,
         whRow: Math.floor(bay / WH_COLS),
       });
       pcsAtStation = 0;
@@ -1162,22 +1206,10 @@ function update(dt) {
     if (b.state === 'packaging') {
       b.progress += dt / 3.5;
       if (b.progress >= 1) {
-        b.state = 'moving'; b.progress = 0;
+        b.state = 'moving';
+        startInboundDelivery(b);
         bundlesPacked++;
         logEv(`Bundle #${bundlesPacked} packed → Warehouse Bay ${b.whCol+1}/${b.whRow+1}`);
-      }
-    }
-    if (b.state === 'moving') {
-      const tx = WH_X0 + b.whCol * WH_CW + WH_CW/2;
-      const ty = WH_Y0 + b.whRow * WH_CD + WH_CD/2;
-      const dx = tx-b.x, dy = ty-b.y, dist = Math.sqrt(dx*dx+dy*dy);
-      if (dist < 0.14) {
-        b.state = 'stored'; b.x = tx; b.y = ty;
-        bundlesInWH++;
-        logEv(`✓ Bundle stored at WH Col ${b.whCol+1} Row ${b.whRow+1}`);
-      } else {
-        const mv = Math.min(1.4*dt, dist);
-        b.x += dx/dist*mv; b.y += dy/dist*mv;
       }
     }
   });
@@ -1230,11 +1262,15 @@ function render() {
   // ---- Draw scene back-to-front ----
   drawFloor();
   drawShippingDock();
-  drawWarehouse();
   drawShippingTruck();
+  if (shipping.lift.x < EAST_LANE_X - 0.01) {
+    drawForklift(shipping.lift, shipping.lift.carrying, true);
+  }
+  drawWarehouse();
   drawLights();
-  drawMovingBundles();
-  drawShippingForklift();
+  if (shipping.lift.x >= EAST_LANE_X - 0.01) {
+    drawForklift(shipping.lift, shipping.lift.carrying, true);
+  }
   drawBundlePackStation();
   drawUncoiler();
   drawRF();
@@ -1242,6 +1278,7 @@ function render() {
   drawSaw();
   drawPayoff();
   drawCarrierWorker();
+  drawForklift(inbound, inbound.cargo !== null, false);
   drawDataChips();
 }
 

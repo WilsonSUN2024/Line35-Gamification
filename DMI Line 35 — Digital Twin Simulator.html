@@ -333,8 +333,12 @@ const WH_CW    = 1.6;   // cell width (along x)
 const WH_CD    = 1.3;   // cell depth (along y)
 
 const PIECES_PER_BUNDLE = 7;
-const ORDER_SIZE = 2;
-const ORDER_INTERVAL = 37;
+const ORDER_SIZE = 12;
+const ORDER_INTERVAL = 222;
+const TRUCK_CARGO_ROWS = 6;
+const TRUCK_CARGO_START = 2.35;
+const TRUCK_CARGO_SPACING = 0.75;
+const BUNDLE_HEIGHT = 0.36;
 const DOCK_X = 20.5;
 const DOCK_Y = 6;
 const ROAD_START_Y = -16;
@@ -933,10 +937,11 @@ function drawShippingTruck() {
   bx(x, y + 1.95, 0.67, 1.9, 5.2, 0.13, '#8c99a8', '#465365', '#647487');
   bx(x + 1.82, y + 1.95, 0.8, 0.08, 5.2, 0.24, '#a3b3c3', '#536478', '#73859a');
   for (let i = 0; i < shipping.loaded; i++) {
-    const cargoY = y + 3.25 + i * 0.65;
-    bx(x + 0.1, cargoY, 0.8, 1.55, 0.48, 0.36, '#8aacba', '#6a8c9a', '#7a9caa');
+    const cargoY = y + TRUCK_CARGO_START + (i % TRUCK_CARGO_ROWS) * TRUCK_CARGO_SPACING;
+    const cargoZ = 0.8 + Math.floor(i / TRUCK_CARGO_ROWS) * BUNDLE_HEIGHT;
+    bx(x + 0.1, cargoY, cargoZ, 1.55, 0.48, BUNDLE_HEIGHT, '#8aacba', '#6a8c9a', '#7a9caa');
     for (const bandX of [x + 0.45, x + 1.2]) {
-      bx(bandX, cargoY, 0.8, 0.1, 0.48, 0.37, '#e06010', '#b04800', '#cc5408');
+      bx(bandX, cargoY, cargoZ, 0.1, 0.48, BUNDLE_HEIGHT, '#e06010', '#b04800', '#cc5408');
     }
   }
   lbl(x + 0.9, y + 2.4, 2.2, `ORDER #${shipping.order} · ${shipping.loaded}/${ORDER_SIZE}`, '#ffd67b', 10);
@@ -949,7 +954,8 @@ function drawShippingForklift() {
     bx(x + (facesDock ? -offset - w : offset), y + dy, z, w, d, h, ...colors);
   forkBox(-0.35, -0.3, 0.05, 0.9, 0.64, 0.48, '#d6ac29', '#9c7412', '#b98e1a');
   forkBox(-0.48, -0.26, 0.48, 0.13, 0.49, 1.12, '#e8bb38', '#a77d17', '#c39826');
-  const forkZ = carrying ? 0.72 : 0.34;
+  const liftHeight = facesDock ? Math.floor(shipping.loaded / TRUCK_CARGO_ROWS) * BUNDLE_HEIGHT : 0;
+  const forkZ = carrying ? 0.72 + liftHeight : 0.34;
   for (const dy of [-0.19, 0.14]) {
     forkBox(-1.18, dy, forkZ, 0.73, 0.08, 0.08, '#aab8c6', '#64768b', '#8596a7');
   }
@@ -1056,7 +1062,8 @@ function updateShipping(dt) {
   if (shipping.route.length === 0) {
     const bundle = shipping.pending[0];
     const pickupX = bundle.x + 1;
-    const dockY = DOCK_Y + 3.48 + shipping.loaded * 0.65;
+    const dockY = DOCK_Y + TRUCK_CARGO_START +
+      (shipping.loaded % TRUCK_CARGO_ROWS) * TRUCK_CARGO_SPACING + 0.24;
     shipping.route = [
       { x: lift.x, y: SHIPPING_AISLE_Y },
       { x: pickupX, y: SHIPPING_AISLE_Y },

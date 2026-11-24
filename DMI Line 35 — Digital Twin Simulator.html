@@ -57,6 +57,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;heigh
   <div class="pr"><span>Pieces Cut</span><span class="pv" id="p-cut">0</span></div>
   <div class="pr"><span>Bundles Packed</span><span class="pv" id="p-bnd">0</span></div>
   <div class="pr"><span>In Warehouse</span><span class="pv" id="p-wh">0</span></div>
+  <div class="pr"><span>Bundles Shipped</span><span class="pv" id="p-shipped">0</span></div>
+  <div class="pr"><span>Shipping Dock</span><span class="pv" id="p-dock">Awaiting order</span></div>
   <div class="pr"><span>OEE</span><span class="pv" id="p-oee">—</span></div>
   <div class="pr"><span>Sim Time</span><span class="pv" id="p-time">00:00:00</span></div>
 </div>
@@ -331,6 +333,17 @@ const WH_CW    = 1.6;   // cell width (along x)
 const WH_CD    = 1.3;   // cell depth (along y)
 
 const PIECES_PER_BUNDLE = 7;
+const ORDER_SIZE = 2;
+const ORDER_INTERVAL = 37;
+const DOCK_X = 20.5;
+const DOCK_Y = 6;
+const ROAD_START_Y = -16;
+const SHIPPING_AISLE_Y = 9.5;
+const shipping = {
+  phase: 'waiting', nextOrder: 2, order: 0, shipped: 0, loaded: 0,
+  truckY: ROAD_START_Y, pending: [], route: [],
+  lift: { x: 18.8, y: SHIPPING_AISLE_Y, carrying: false, facesDock: false },
+};
 
 // ── Pre-fill warehouse with opening inventory (~64% of capacity) ──
 const INIT_WH = 23;  // 36 slots total → 23 ≈ 64%
@@ -778,10 +791,6 @@ function drawWarehouse() {
         bx(rx+0.1, ry+0.04, 0, WH_CW-0.2, WH_CD-0.1, 0.42, '#8aacba','#6a8c9a','#7a9caa');
         bx(rx+0.3, ry+0.04, 0.3, 0.14, WH_CD-0.1, 0.17, '#d05808','#a04800','#b85005');
         bx(rx+WH_CW-0.5, ry+0.04, 0.3, 0.14, WH_CD-0.1, 0.17, '#d05808','#a04800','#b85005');
-        // Upper-shelf bundle
-        bx(rx+0.1, ry+0.04, 1.02, WH_CW-0.2, WH_CD-0.1, 0.42, '#7a9caa','#5a8a98','#6a92a0');
-        bx(rx+0.3, ry+0.04, 1.32, 0.14, WH_CD-0.1, 0.17, '#c04806','#904200','#a84804');
-        bx(rx+WH_CW-0.5, ry+0.04, 1.32, 0.14, WH_CD-0.1, 0.17, '#c04806','#904200','#a84804');
       }
     }
   }
@@ -893,6 +902,66 @@ function drawCarrierWorker() {
 }
 
 // ---- MOVING BUNDLES / FORKLIFT ----
+function drawShippingDock() {
+  for (let x = 20; x <= 22; x++) {
+    for (let y = -8; y <= 11; y++) tile(x, y, '#202b38');
+  }
+  for (let y = -8; y <= 11; y++) {
+    bx(DOCK_X + 2.4, y, 0, 0.05, 0.52, 0.02, '#dbb84c', '#a98d33', '#ba9a38');
+  }
+  bx(DOCK_X - 1.05, SHIPPING_AISLE_Y + 0.55, 0, 0.95, 0.12, 0.07, '#e0b03b', '#aa8226', '#c2932b');
+  lbl(DOCK_X + 0.75, 11.8, 0.05, 'SHIP-OUT DOCK', '#f0c264', 10);
+}
+
+function drawShippingTruck() {
+  if (shipping.phase === 'waiting') return;
+  const x = DOCK_X;
+  const y = shipping.truckY;
+  for (const wheelY of [y + 0.65, y + 2.15, y + 5.85, y + 6.45]) {
+    for (const wheelX of [x - 0.08, x + 1.64]) {
+      bx(wheelX, wheelY, 0.02, 0.32, 0.48, 0.55, '#354353', '#141c27', '#222d3a');
+      bx(wheelX - 0.02, wheelY + 0.13, 0.16, 0.06, 0.23, 0.22, '#a8b1bd', '#75808e', '#8993a0');
+    }
+  }
+  bx(x, y + 0.2, 0.44, 1.9, 6.8, 0.23, '#627080', '#303b4a', '#435162');
+  bx(x + 0.05, y, 0.55, 1.8, 1.7, 1.45, '#478ad3', '#245391', '#326aaf');
+  bx(x + 0.01, y + 0.15, 1.26, 0.06, 0.88, 0.47, '#aed9ee', '#527e9e', '#74a7bf');
+  bx(x + 0.2, y - 0.04, 1.26, 1.48, 0.08, 0.47, '#aed9ee', '#527e9e', '#74a7bf');
+  bx(x + 0.04, y - 0.06, 0.65, 0.25, 0.12, 0.16, '#fff1b6', '#c39043', '#deaf55');
+
+  // Open flatbed keeps the load visible as it leaves the dock.
+  bx(x, y + 1.95, 0.67, 1.9, 5.2, 0.13, '#8c99a8', '#465365', '#647487');
+  bx(x + 1.82, y + 1.95, 0.8, 0.08, 5.2, 0.24, '#a3b3c3', '#536478', '#73859a');
+  for (let i = 0; i < shipping.loaded; i++) {
+    const cargoY = y + 3.25 + i * 0.65;
+    bx(x + 0.1, cargoY, 0.8, 1.55, 0.48, 0.36, '#8aacba', '#6a8c9a', '#7a9caa');
+    for (const bandX of [x + 0.45, x + 1.2]) {
+      bx(bandX, cargoY, 0.8, 0.1, 0.48, 0.37, '#e06010', '#b04800', '#cc5408');
+    }
+  }
+  lbl(x + 0.9, y + 2.4, 2.2, `ORDER #${shipping.order} · ${shipping.loaded}/${ORDER_SIZE}`, '#ffd67b', 10);
+}
+
+function drawShippingForklift() {
+  if (shipping.phase !== 'loading') return;
+  const { x, y, carrying, facesDock } = shipping.lift;
+  const forkBox = (offset, dy, z, w, d, h, ...colors) =>
+    bx(x + (facesDock ? -offset - w : offset), y + dy, z, w, d, h, ...colors);
+  forkBox(-0.35, -0.3, 0.05, 0.9, 0.64, 0.48, '#d6ac29', '#9c7412', '#b98e1a');
+  forkBox(-0.48, -0.26, 0.48, 0.13, 0.49, 1.12, '#e8bb38', '#a77d17', '#c39826');
+  const forkZ = carrying ? 0.72 : 0.34;
+  for (const dy of [-0.19, 0.14]) {
+    forkBox(-1.18, dy, forkZ, 0.73, 0.08, 0.08, '#aab8c6', '#64768b', '#8596a7');
+  }
+  if (carrying) {
+    forkBox(-1.3, -0.24, forkZ + 0.08, 0.84, 0.48, 0.36, '#8aacba', '#6a8c9a', '#7a9caa');
+    for (const offset of [-1.15, -0.68]) {
+      forkBox(offset, -0.24, forkZ + 0.08, 0.1, 0.48, 0.37, '#e06010', '#b04800', '#cc5408');
+    }
+  }
+  drawWorker(x - 0.02, y - 0.12, '#ef9b27', 0);
+}
+
 function drawMovingBundles() {
   bundles.forEach(b => {
     if (b.state === 'stored') return;
@@ -952,6 +1021,88 @@ function drawDataChips() {
 // ============================================================
 //  UPDATE
 // ============================================================
+function updateShipping(dt) {
+  if (shipping.phase === 'waiting') {
+    if (simT < shipping.nextOrder || bundlesInWH < ORDER_SIZE) return;
+    shipping.order++;
+    shipping.nextOrder = simT + ORDER_INTERVAL;
+    shipping.loaded = 0;
+    shipping.pending = bundles.filter(bundle => bundle.state === 'stored')
+      .sort((a, b) => b.whRow - a.whRow || b.whCol - a.whCol)
+      .slice(0, ORDER_SIZE);
+    shipping.phase = 'arriving';
+    logEv(`Order #${shipping.order} booked · ${ORDER_SIZE} bundles`);
+    return;
+  }
+
+  if (shipping.phase === 'arriving') {
+    shipping.truckY = Math.min(DOCK_Y, shipping.truckY + 4 * dt);
+    if (shipping.truckY === DOCK_Y) {
+      shipping.phase = 'loading';
+      logEv(`Truck at dock for order #${shipping.order}`);
+    }
+    return;
+  }
+
+  if (shipping.phase === 'departing') {
+    shipping.truckY = Math.max(ROAD_START_Y, shipping.truckY - 5 * dt);
+    if (shipping.truckY === ROAD_START_Y) {
+      shipping.phase = 'waiting';
+    }
+    return;
+  }
+
+  const lift = shipping.lift;
+  if (shipping.route.length === 0) {
+    const bundle = shipping.pending[0];
+    const pickupX = bundle.x + 1;
+    const dockY = DOCK_Y + 3.48 + shipping.loaded * 0.65;
+    shipping.route = [
+      { x: lift.x, y: SHIPPING_AISLE_Y },
+      { x: pickupX, y: SHIPPING_AISLE_Y },
+      { x: pickupX, y: bundle.y, action: 'pickup' },
+      { x: pickupX, y: SHIPPING_AISLE_Y },
+      { x: DOCK_X - 1.25, y: SHIPPING_AISLE_Y, action: 'turn' },
+      { x: DOCK_X - 1.25, y: dockY },
+      { x: DOCK_X - 0.95, y: dockY, action: 'load' },
+      { x: DOCK_X - 1.7, y: SHIPPING_AISLE_Y, action: 'clear' },
+    ];
+    lift.facesDock = false;
+  }
+
+  const target = shipping.route[0];
+  const dx = target.x - lift.x;
+  const dy = target.y - lift.y;
+  const distance = Math.hypot(dx, dy);
+  const travel = dt * 2.7;
+  if (distance > travel) {
+    lift.x += dx * travel / distance;
+    lift.y += dy * travel / distance;
+    return;
+  }
+  lift.x = target.x;
+  lift.y = target.y;
+  shipping.route.shift();
+
+  if (target.action === 'pickup') {
+    const bundle = shipping.pending.shift();
+    bundles.splice(bundles.indexOf(bundle), 1);
+    bundlesInWH--;
+    lift.carrying = true;
+    logEv(`Order #${shipping.order} · forklift picked up a bundle`);
+  } else if (target.action === 'turn') {
+    lift.facesDock = true;
+  } else if (target.action === 'load') {
+    lift.carrying = false;
+    shipping.loaded++;
+    logEv(`Order #${shipping.order} · loaded ${shipping.loaded}/${ORDER_SIZE}`);
+  } else if (target.action === 'clear' && shipping.loaded === ORDER_SIZE) {
+    shipping.shipped += shipping.loaded;
+    shipping.phase = 'departing';
+    logEv(`Truck departed · order #${shipping.order} shipped (${ORDER_SIZE} bundles)`);
+  }
+}
+
 function update(dt) {
   dt *= SPD;
   simT += dt;
@@ -980,17 +1131,24 @@ function update(dt) {
   sparks.forEach(s => { s.life -= dt * 2.8; });
   sparks = sparks.filter(s => s.life > 0);
 
-  // Bundle lifecycle
-  const nextBundleNeeded = bundlesPacked + (bundles.find(b=>b.state!=='stored')?1:0) + 1;
-  if (piecesCut >= nextBundleNeeded * PIECES_PER_BUNDLE) {
-    bundles.push({
-      state: 'packaging', progress: 0,
-      x: BS_X + 1.4, y: LINE_Y,
-      whCol: bundlesPacked % WH_COLS,
-      whRow: Math.floor(bundlesPacked / WH_COLS) % WH_ROWS,
-    });
-    pcsAtStation = 0;
-    logEv(`Bundle #${Math.floor(piecesCut/PIECES_PER_BUNDLE)} ready for strapping`);
+  updateShipping(dt);
+
+  // Reserve a free warehouse bay while the inbound forklift is in transit.
+  const nextBundleNeeded = bundlesPacked + 1;
+  if (piecesCut >= nextBundleNeeded * PIECES_PER_BUNDLE && !bundles.some(b => b.state !== 'stored')) {
+    const occupied = new Set(bundles.map(b => b.whRow * WH_COLS + b.whCol));
+    let bay = 0;
+    while (bay < WH_ROWS * WH_COLS && occupied.has(bay)) bay++;
+    if (bay < WH_ROWS * WH_COLS) {
+      bundles.push({
+        state: 'packaging', progress: 0,
+        x: BS_X + 1.4, y: LINE_Y,
+        whCol: bay % WH_COLS,
+        whRow: Math.floor(bay / WH_COLS),
+      });
+      pcsAtStation = 0;
+      logEv(`Bundle #${nextBundleNeeded} ready for strapping`);
+    }
   }
 
   bundles.forEach(b => {
@@ -1024,6 +1182,14 @@ function update(dt) {
   document.getElementById('p-cut').textContent = piecesCut;
   document.getElementById('p-bnd').textContent = bundlesPacked;
   document.getElementById('p-wh').textContent  = bundlesInWH;
+  document.getElementById('p-shipped').textContent = shipping.shipped;
+  const dockStatus = {
+    waiting: 'Awaiting order',
+    arriving: 'Truck arriving',
+    loading: `Loading ${shipping.loaded}/${ORDER_SIZE}`,
+    departing: 'Truck departing',
+  };
+  document.getElementById('p-dock').textContent = dockStatus[shipping.phase];
   document.getElementById('p-time').textContent = tStr();
   const hrs = simT / 3600;
   if (hrs > 0.001) {
@@ -1056,9 +1222,12 @@ function render() {
 
   // ---- Draw scene back-to-front ----
   drawFloor();
+  drawShippingDock();
   drawWarehouse();
+  drawShippingTruck();
   drawLights();
   drawMovingBundles();
+  drawShippingForklift();
   drawBundlePackStation();
   drawUncoiler();
   drawRF();

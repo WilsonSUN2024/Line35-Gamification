@@ -578,19 +578,17 @@ function drawFloor() {
 // ---- PAY-OFF TABLE (出料台 — runout table after Flying Saw) ----
 function drawPayoff() {
   const x = PO_X - 0.1, y = LINE_Y - 0.35;
-  // Main table frame
-  bx(x, y, 0, 1.8, 1.0, 0.3, '#1a3040','#102030','#152838');
-  // Table top surface
-  bx(x, y, 0.3, 1.8, 1.0, 0.08, '#28485a','#1a3848','#223848');
-  // 5 conveyor rollers on top surface
-  const nRollers = 5;
-  for (let i = 0; i < nRollers; i++) {
-    const rx = x + 0.1 + i * (1.6 / nRollers);
+  // Extend the roller bed to the saw discharge while keeping the pickup end in place.
+  const intakeX = FS_X + 0.58;
+  const bedLength = x + 1.8 - intakeX;
+  bx(intakeX, y, 0, bedLength, 1.0, 0.3, '#1a3040','#102030','#152838');
+  bx(intakeX, y, 0.3, bedLength, 1.0, 0.08, '#28485a','#1a3848','#223848');
+  for (let rx = intakeX + 0.1; rx + 0.14 <= x + 1.7; rx += 0.32) {
     bx(rx, y+0.1, 0.38, 0.14, 0.82, 0.12, '#3a6880','#2a5870','#326078');
   }
   // Side guide rails
-  bx(x, y+0.05, 0.38, 1.8, 0.07, 0.3, '#305070','#203860','#283868');
-  bx(x, y+0.86, 0.38, 1.8, 0.07, 0.3, '#305070','#203860','#283868');
+  bx(intakeX, y+0.05, 0.38, bedLength, 0.07, 0.3, '#305070','#203860','#283868');
+  bx(intakeX, y+0.86, 0.38, bedLength, 0.07, 0.3, '#305070','#203860','#283868');
   // Legs
   bx(x+0.1,  y+0.08, 0, 0.14, 0.14, 0.3, '#1e3448','#142438','#182e40');
   bx(x+1.5,  y+0.08, 0, 0.14, 0.14, 0.3, '#1e3448','#142438','#182e40');

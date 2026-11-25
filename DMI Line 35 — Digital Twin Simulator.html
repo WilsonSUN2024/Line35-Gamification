@@ -54,7 +54,11 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;heigh
 .office-orders-trigger:focus-visible,.orders-action:focus-visible,.office-monitor-trigger:focus-visible{
   outline:2px solid #75e3ff;outline-offset:2px
 }
-.office-orders-trigger,.office-monitor-trigger{position:absolute;z-index:1;transform:translate(-50%,-50%)}
+.office-actions,.office-monitor-trigger{position:absolute;z-index:1;transform:translate(-50%,-50%)}
+.office-actions{display:flex;gap:5px}
+.schedule-filter{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:12px}
+.schedule-filter select{font:inherit;color:#d9ecff;background:#0b2137;border:1px solid #326d94;border-radius:4px;padding:4px 6px}
+.schedule-table{min-width:630px}
 .office-orders-trigger{font-size:10px;white-space:nowrap;box-shadow:0 0 12px #0c5d8355}
 .office-monitor-trigger{width:25px;height:25px;cursor:pointer;background:transparent;border:1px solid transparent;border-radius:4px}
 .office-monitor-trigger:hover{border-color:#75e3ff;background:#75e3ff24}
@@ -117,13 +121,17 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;heigh
   <span class="sv" id="spv">1.0×</span>
 </div>
 
-<button type="button" id="office-orders-trigger" class="office-orders-trigger" aria-controls="assigned-orders" aria-expanded="false">Check Assigned Customer Orders</button>
+<div id="office-actions" class="office-actions">
+  <button type="button" id="office-orders-trigger" class="office-orders-trigger" aria-controls="assigned-orders" aria-expanded="false">Check Assigned Customer Orders</button>
+  <button type="button" id="office-schedule-trigger" class="office-orders-trigger" aria-controls="assigned-orders" aria-expanded="false">Production Schedule</button>
+</div>
 <button type="button" id="office-monitor-trigger" class="office-monitor-trigger" aria-label="Check assigned customer orders on the office computer" title="Check Assigned Customer Orders" aria-controls="assigned-orders" aria-expanded="false" tabindex="-1"></button>
 <section id="assigned-orders" class="panel" role="dialog" aria-labelledby="assigned-orders-title" hidden>
   <header class="orders-header">
     <h2 id="assigned-orders-title">ASSIGNED CUSTOMER ORDERS</h2>
     <button type="button" class="orders-action" id="orders-close" aria-label="Close assigned customer orders">Close</button>
   </header>
+  <div id="orders-view">
   <p class="orders-description"><strong class="orders-data-label">SIMULATED DATA</strong><br>
     Synthetic customer orders for this scenario, assigned to the MON plant by the Sales &amp; Order Entry Department.</p>
   <div class="orders-table-scroll" role="region" aria-label="Assigned customer order table" tabindex="0">
@@ -135,6 +143,25 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;heigh
       </tr></thead>
       <tbody id="assigned-orders-rows"></tbody>
     </table>
+  </div>
+  </div>
+  <div id="schedule-view" hidden>
+    <p class="orders-description"><strong class="orders-data-label">SIMULATED DATA</strong><br>
+      Example plan for MON Plant · Line 35. Dates and shifts are local to the plant.</p>
+    <label class="schedule-filter">Filter by status
+      <select id="schedule-status">
+        <option value="">All statuses</option><option>Scheduled</option><option>In progress</option>
+        <option>On hold</option><option>Complete</option>
+      </select>
+    </label>
+    <div class="orders-table-scroll" role="region" aria-label="Production schedule table" tabindex="0">
+      <table class="orders-table schedule-table" aria-labelledby="assigned-orders-title">
+        <thead><tr><th scope="col">Work Order</th><th scope="col">Customer Order</th><th scope="col">D35 Product Code</th>
+          <th scope="col" class="orders-quantity">Planned Quantity</th><th scope="col">Production Date</th>
+          <th scope="col">Shift</th><th scope="col">Status</th></tr></thead>
+        <tbody id="schedule-rows"></tbody>
+      </table>
+    </div>
   </div>
   <footer class="orders-footer">
     <p id="orders-log-status" role="status"></p>
@@ -1527,7 +1554,20 @@ const assignedOrders = [
   { id: 'SIM-CO-002', product: 'D3530GA', quantity: 12500, shipDate: '2027-01-18', status: 'Confirmed' },
   { id: 'SIM-CO-003', product: 'D3550GA10', quantity: 8500, shipDate: '2027-01-20', status: 'On hold' },
 ];
+const productionSchedule = [
+  ['SIM-WO-101', 'SIM-CO-001', 8000, '2027-01-11', 'Day', 'Complete'],
+  ['SIM-WO-102', 'SIM-CO-001', 12000, '2027-01-12', 'Day', 'In progress'],
+  ['SIM-WO-103', 'SIM-CO-002', 12500, '2027-01-13', 'Day', 'Scheduled'],
+  ['SIM-WO-104', 'SIM-CO-003', 8500, '2027-01-14', 'Evening', 'On hold'],
+];
 const ordersPanel = document.getElementById('assigned-orders');
+const officeActions = document.getElementById('office-actions');
+const scheduleTrigger = document.getElementById('office-schedule-trigger');
+const ordersView = document.getElementById('orders-view');
+const scheduleView = document.getElementById('schedule-view');
+const scheduleRows = document.getElementById('schedule-rows');
+const scheduleStatus = document.getElementById('schedule-status');
+const panelTitle = document.getElementById('assigned-orders-title');
 const ordersTrigger = document.getElementById('office-orders-trigger');
 const monitorTrigger = document.getElementById('office-monitor-trigger');
 const ordersClose = document.getElementById('orders-close');
@@ -1535,7 +1575,17 @@ const ordersLogStatus = document.getElementById('orders-log-status');
 const ordersExport = document.getElementById('orders-export');
 const ordersRows = document.getElementById('assigned-orders-rows');
 const quantityFormat = new Intl.NumberFormat('en-US');
-let lastOrdersTrigger = ordersTrigger;
+let activeOfficeView = null;
+let lastOfficeTrigger = ordersTrigger;
+const officeViews = {
+  orders: { title: 'ASSIGNED CUSTOMER ORDERS', event: 'assigned_customer_orders' },
+  schedule: { title: 'PRODUCTION SCHEDULE', event: 'production_schedule' },
+};
+const officeTriggers = [
+  [ordersTrigger, 'orders', 'office_label'],
+  [monitorTrigger, 'orders', 'office_computer'],
+  [scheduleTrigger, 'schedule', 'office_label'],
+];
 
 for (const order of assignedOrders) {
   const row = ordersRows.insertRow();
@@ -1545,13 +1595,29 @@ for (const order of assignedOrders) {
   row.cells[2].className = 'orders-quantity';
 }
 
+function renderProductionSchedule() {
+  scheduleRows.replaceChildren();
+  for (const [workOrder, orderId, quantity, date, shift, status] of productionSchedule) {
+    if (scheduleStatus.value && scheduleStatus.value !== status) continue;
+    const order = assignedOrders.find(item => item.id === orderId);
+    const row = scheduleRows.insertRow();
+    for (const value of [workOrder, orderId, order.product, quantityFormat.format(quantity), date, shift, status]) {
+      row.insertCell().textContent = value;
+    }
+    row.cells[3].className = 'orders-quantity';
+  }
+}
+renderProductionSchedule();
+scheduleStatus.addEventListener('change', renderProductionSchedule);
+
 function positionOrdersTriggers() {
   const { x, y, width, depth, height, monitor } = productionOffice;
   const labelPoint = iso(x + width / 2, y + depth / 2, height + 1.65);
   const monitorPoint = iso(x + monitor.x + monitor.width / 2, y + monitor.y + monitor.depth / 2,
     monitor.z + monitor.height / 2);
-  ordersTrigger.style.left = Math.max(105, Math.min(CV.width - 105, labelPoint.x)) + 'px';
-  ordersTrigger.style.top = Math.max(58, labelPoint.y) + 'px';
+  const halfWidth = officeActions.offsetWidth / 2 + 8;
+  officeActions.style.left = Math.max(halfWidth, Math.min(CV.width - halfWidth, labelPoint.x)) + 'px';
+  officeActions.style.top = Math.max(58, labelPoint.y) + 'px';
   monitorTrigger.style.left = monitorPoint.x + 'px';
   monitorTrigger.style.top = monitorPoint.y + 'px';
 }
@@ -1570,28 +1636,37 @@ function logOrdersEvent(eventType, source) {
   ordersExport.hidden = false;
 }
 
-function setOrdersOpen(open, source) {
-  if (open === !ordersPanel.hidden) return;
-  ordersPanel.hidden = !open;
-  for (const button of [ordersTrigger, monitorTrigger]) {
-    button.setAttribute('aria-expanded', String(open));
+function showOfficeView(view, source, opener) {
+  if (view === activeOfficeView) return;
+  if (activeOfficeView) {
+    logOrdersEvent(officeViews[activeOfficeView].event + '_closed', view ? 'view_switch' : source);
   }
-  logOrdersEvent(open ? 'assigned_customer_orders_opened' : 'assigned_customer_orders_closed', source);
-  if (open) ordersClose.focus();
-  else lastOrdersTrigger.focus();
+  activeOfficeView = view;
+  ordersPanel.hidden = !view;
+  ordersView.hidden = view !== 'orders';
+  scheduleView.hidden = view !== 'schedule';
+  for (const [button, buttonView] of officeTriggers) {
+    button.setAttribute('aria-expanded', String(view === buttonView));
+  }
+  if (view) {
+    lastOfficeTrigger = opener;
+    panelTitle.textContent = officeViews[view].title;
+    ordersClose.setAttribute('aria-label', 'Close ' + officeViews[view].title.toLowerCase());
+    logOrdersEvent(officeViews[view].event + '_opened', source);
+    ordersClose.focus();
+  } else {
+    lastOfficeTrigger.focus();
+  }
 }
 
-for (const [button, source] of [[ordersTrigger, 'office_label'], [monitorTrigger, 'office_computer']]) {
-  button.addEventListener('click', () => {
-    lastOrdersTrigger = button;
-    setOrdersOpen(true, source);
-  });
+for (const [button, view, source] of officeTriggers) {
+  button.addEventListener('click', () => showOfficeView(view, source, button));
 }
-ordersClose.addEventListener('click', () => setOrdersOpen(false, 'close_button'));
+ordersClose.addEventListener('click', () => showOfficeView(null, 'close_button'));
 document.addEventListener('keydown', event => {
-  if (event.key !== 'Escape' || ordersPanel.hidden) return;
+  if (event.key !== 'Escape' || !activeOfficeView) return;
   event.preventDefault();
-  setOrdersOpen(false, 'escape_key');
+  showOfficeView(null, 'escape_key');
 });
 
 ordersExport.addEventListener('click', () => {

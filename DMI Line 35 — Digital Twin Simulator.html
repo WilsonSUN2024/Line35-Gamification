@@ -45,6 +45,35 @@ input[type=range]{-webkit-appearance:none;width:88px;height:3px;
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;
   background:#3a90d8;border-radius:50%;cursor:pointer}
 .sv{font-size:11px;color:#4ad8ff;min-width:28px;text-align:right}
+
+.office-orders-trigger,.orders-action{
+  border:1px solid #326d94;border-radius:4px;background:#0b2137;color:#a7e8fd;
+  font:600 11px Consolas,monospace;padding:7px 10px;cursor:pointer
+}
+.office-orders-trigger:hover,.orders-action:hover{background:#173b54;color:#e8faff}
+.office-orders-trigger:focus-visible,.orders-action:focus-visible,.office-monitor-trigger:focus-visible{
+  outline:2px solid #75e3ff;outline-offset:2px
+}
+.office-orders-trigger,.office-monitor-trigger{position:absolute;z-index:1;transform:translate(-50%,-50%)}
+.office-orders-trigger{font-size:10px;white-space:nowrap;box-shadow:0 0 12px #0c5d8355}
+.office-monitor-trigger{width:25px;height:25px;cursor:pointer;background:transparent;border:1px solid transparent;border-radius:4px}
+.office-monitor-trigger:hover{border-color:#75e3ff;background:#75e3ff24}
+#assigned-orders{z-index:2;top:192px;right:16px;width:min(640px,calc(100% - 32px));
+  max-height:calc(100vh - 208px);overflow:auto;background:#071426f5;padding:16px}
+.orders-header,.orders-footer{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.orders-header h2{font:700 13px Consolas,monospace;letter-spacing:1.2px;color:#8ce4ff}
+.orders-description{font-size:12px;line-height:1.45;margin:12px 0;color:#b0c7de}
+.orders-data-label{color:#ffdb8a;font:700 10px Consolas,monospace;letter-spacing:1px}
+.orders-table-scroll{overflow:auto}
+.orders-table{width:100%;min-width:482px;border-collapse:collapse;font:12px Consolas,monospace}
+.orders-table th,.orders-table td{padding:9px 8px;border-bottom:1px solid #203b55;text-align:left}
+.orders-table th{color:#8eb9dd;background:#102740;font-size:11px}
+.orders-table td{white-space:nowrap;color:#d9ecff}
+.orders-table .orders-quantity{text-align:right;font-variant-numeric:tabular-nums}
+.orders-footer{margin-top:14px;flex-wrap:wrap}
+#orders-log-status{font-size:11px;color:#a1bdd7}
+#orders-export{position:absolute;right:16px;bottom:53px;z-index:1}
+@media(max-height:520px){#assigned-orders{top:55px;max-height:calc(100vh - 70px)}}
 </style>
 </head>
 <body>
@@ -87,6 +116,31 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;heigh
   <input type="range" id="speed" min="0.3" max="6" step="0.1" value="1">
   <span class="sv" id="spv">1.0×</span>
 </div>
+
+<button type="button" id="office-orders-trigger" class="office-orders-trigger" aria-controls="assigned-orders" aria-expanded="false">Check Assigned Customer Orders</button>
+<button type="button" id="office-monitor-trigger" class="office-monitor-trigger" aria-label="Check assigned customer orders on the office computer" title="Check Assigned Customer Orders" aria-controls="assigned-orders" aria-expanded="false" tabindex="-1"></button>
+<section id="assigned-orders" class="panel" role="dialog" aria-labelledby="assigned-orders-title" hidden>
+  <header class="orders-header">
+    <h2 id="assigned-orders-title">ASSIGNED CUSTOMER ORDERS</h2>
+    <button type="button" class="orders-action" id="orders-close" aria-label="Close assigned customer orders">Close</button>
+  </header>
+  <p class="orders-description"><strong class="orders-data-label">SIMULATED DATA</strong><br>
+    Synthetic customer orders for this scenario, assigned to the MON plant by the Sales &amp; Order Entry Department.</p>
+  <div class="orders-table-scroll" role="region" aria-label="Assigned customer order table" tabindex="0">
+    <table class="orders-table" aria-labelledby="assigned-orders-title">
+      <thead><tr>
+        <th scope="col">Customer Order ID</th><th scope="col">D35 Product Code</th>
+        <th scope="col" class="orders-quantity">Order Quantity</th>
+        <th scope="col">Promised Ship-Out Date</th><th scope="col">Order Status</th>
+      </tr></thead>
+      <tbody id="assigned-orders-rows"></tbody>
+    </table>
+  </div>
+  <footer class="orders-footer">
+    <p id="orders-log-status" role="status"></p>
+  </footer>
+</section>
+<button type="button" class="orders-action" id="orders-export" hidden>Export Behavioral Logs (JSON)</button>
 
 <script>
 'use strict';
@@ -897,9 +951,12 @@ function storageDeck(level) {
 }
 
 // ---- PRODUCTION MANAGER'S OFFICE ----
+const productionOffice = {
+  x: WH_X0 - 4.25, y: WH_Y0 + 0.2, width: 1.95, depth: 2.95, height: 1.85,
+  monitor: { x: 0.83, y: 1.92, z: 0.74, width: 0.48, depth: 0.07, height: 0.31 },
+};
 function drawProductionManagerOffice() {
-  const x = WH_X0 - 4.25, y = WH_Y0 + 0.2;
-  const width = 1.95, depth = 2.95, height = 1.85;
+  const { x, y, width, depth, height, monitor } = productionOffice;
   const frame = '#476d7a';
 
   bx(x-0.08, y-0.08, 0, width+0.16, depth+0.16, 0.12, '#38505f', '#172b3a', '#203747');
@@ -933,7 +990,8 @@ function drawProductionManagerOffice() {
   bx(x+1.41, y+1.40, 0.12, 0.12, 0.68, 0.44, '#6c5140', '#4a352b', '#574032');
   bx(x+0.30, y+1.36, 0.56, 1.29, 0.77, 0.09, '#b58961', '#79563d', '#926c4e');
   bx(x+0.93, y+1.90, 0.65, 0.28, 0.12, 0.09, '#3b586b', '#243848', '#2d4659');
-  bx(x+0.83, y+1.92, 0.74, 0.48, 0.07, 0.31, '#76d2ea', '#294556', '#345867');
+  bx(x + monitor.x, y + monitor.y, monitor.z, monitor.width, monitor.depth, monitor.height,
+    '#76d2ea', '#294556', '#345867');
   bx(x+0.65, y+1.56, 0.65, 0.39, 0.15, 0.035, '#a1b8c5', '#586d7c', '#6d8797');
   bx(x+0.63, y+1.23, 0.69, 0.10, 0.38, 0.07, '#7191b3', '#3c5a7c', '#557697');
   bx(x+0.67, y+1.55, 0.69, 0.11, 0.12, 0.065, '#d5a17f', '#ad7454', '#c28c69');
@@ -1459,6 +1517,97 @@ setTimeout(() => {
   setTimeout(() => logEv('Roll Former: 6 stations nominal. Strip speed 1.2 m/s.'), 1500);
   setTimeout(() => logEv('Flying Saw ready. Cycle: 2.6s / cut.'), 3000);
 }, 600);
+
+// ---- ASSIGNED CUSTOMER ORDERS ----
+const scenarioId = 'mon-d35-assigned-orders-v1';
+const sessionId = crypto.randomUUID();
+const behavioralLogs = [];
+const assignedOrders = [
+  { id: 'SIM-CO-001', product: 'D3510GA', quantity: 20000, shipDate: '2027-01-15', status: 'Assigned' },
+  { id: 'SIM-CO-002', product: 'D3530GA', quantity: 12500, shipDate: '2027-01-18', status: 'Confirmed' },
+  { id: 'SIM-CO-003', product: 'D3550GA10', quantity: 8500, shipDate: '2027-01-20', status: 'On hold' },
+];
+const ordersPanel = document.getElementById('assigned-orders');
+const ordersTrigger = document.getElementById('office-orders-trigger');
+const monitorTrigger = document.getElementById('office-monitor-trigger');
+const ordersClose = document.getElementById('orders-close');
+const ordersLogStatus = document.getElementById('orders-log-status');
+const ordersExport = document.getElementById('orders-export');
+const ordersRows = document.getElementById('assigned-orders-rows');
+const quantityFormat = new Intl.NumberFormat('en-US');
+let lastOrdersTrigger = ordersTrigger;
+
+for (const order of assignedOrders) {
+  const row = ordersRows.insertRow();
+  for (const value of [order.id, order.product, quantityFormat.format(order.quantity), order.shipDate, order.status]) {
+    row.insertCell().textContent = value;
+  }
+  row.cells[2].className = 'orders-quantity';
+}
+
+function positionOrdersTriggers() {
+  const { x, y, width, depth, height, monitor } = productionOffice;
+  const labelPoint = iso(x + width / 2, y + depth / 2, height + 1.65);
+  const monitorPoint = iso(x + monitor.x + monitor.width / 2, y + monitor.y + monitor.depth / 2,
+    monitor.z + monitor.height / 2);
+  ordersTrigger.style.left = Math.max(105, Math.min(CV.width - 105, labelPoint.x)) + 'px';
+  ordersTrigger.style.top = Math.max(58, labelPoint.y) + 'px';
+  monitorTrigger.style.left = monitorPoint.x + 'px';
+  monitorTrigger.style.top = monitorPoint.y + 'px';
+}
+
+function logOrdersEvent(eventType, source) {
+  behavioralLogs.push({
+    eventType,
+    timestamp: new Date().toISOString(),
+    simulationTimeSeconds: simT,
+    sessionId,
+    scenarioId,
+    source,
+  });
+  ordersLogStatus.textContent = behavioralLogs.length + (behavioralLogs.length === 1
+    ? ' event recorded in this session' : ' events recorded in this session');
+  ordersExport.hidden = false;
+}
+
+function setOrdersOpen(open, source) {
+  if (open === !ordersPanel.hidden) return;
+  ordersPanel.hidden = !open;
+  for (const button of [ordersTrigger, monitorTrigger]) {
+    button.setAttribute('aria-expanded', String(open));
+  }
+  logOrdersEvent(open ? 'assigned_customer_orders_opened' : 'assigned_customer_orders_closed', source);
+  if (open) ordersClose.focus();
+  else lastOrdersTrigger.focus();
+}
+
+for (const [button, source] of [[ordersTrigger, 'office_label'], [monitorTrigger, 'office_computer']]) {
+  button.addEventListener('click', () => {
+    lastOrdersTrigger = button;
+    setOrdersOpen(true, source);
+  });
+}
+ordersClose.addEventListener('click', () => setOrdersOpen(false, 'close_button'));
+document.addEventListener('keydown', event => {
+  if (event.key !== 'Escape' || ordersPanel.hidden) return;
+  event.preventDefault();
+  setOrdersOpen(false, 'escape_key');
+});
+
+ordersExport.addEventListener('click', () => {
+  const json = JSON.stringify({ schemaVersion: 1, sessionId, scenarioId, events: behavioralLogs }, null, 2);
+  const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'line35-behavior-' + sessionId + '.json';
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+
+positionOrdersTriggers();
+addEventListener('resize', positionOrdersTriggers);
 
 requestAnimationFrame(loop);
 </script>

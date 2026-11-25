@@ -54,8 +54,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;heigh
 .office-orders-trigger:focus-visible,.orders-action:focus-visible,.office-monitor-trigger:focus-visible{
   outline:2px solid #75e3ff;outline-offset:2px
 }
-.office-actions,.office-monitor-trigger{position:absolute;z-index:1;transform:translate(-50%,-50%)}
+.office-actions,.office-monitor-trigger,.warehouse-trigger{position:absolute;z-index:1;transform:translate(-50%,-50%)}
 .office-actions{display:flex;flex-direction:column;gap:4px}
+.warehouse-trigger{padding:4px 8px}
+.inventory-total{color:#8ce4ff;font:700 13px Consolas,monospace;margin:12px 0}
 .office-actions .office-orders-trigger{padding:4px 10px}
 .schedule-form{display:flex;align-items:end;flex-wrap:wrap;gap:8px;margin-bottom:10px;font-size:12px}
 .schedule-form label{display:grid;gap:4px}
@@ -133,6 +135,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;heigh
   <button type="button" id="office-schedule-trigger" class="office-orders-trigger" aria-controls="assigned-orders" aria-expanded="false">Production Schedule</button>
 </div>
 <button type="button" id="office-monitor-trigger" class="office-monitor-trigger" aria-label="Check assigned customer orders on the office computer" title="Check Assigned Customer Orders" aria-controls="assigned-orders" aria-expanded="false" tabindex="-1"></button>
+<button type="button" id="raw-inventory-trigger" class="office-orders-trigger warehouse-trigger" aria-controls="assigned-orders" aria-expanded="false">Check Raw Material Inventory</button>
+<button type="button" id="finished-inventory-trigger" class="office-orders-trigger warehouse-trigger" aria-controls="assigned-orders" aria-expanded="false">Check Finished Goods Inventory</button>
 <section id="assigned-orders" class="panel" role="dialog" aria-labelledby="assigned-orders-title" hidden>
   <header class="orders-header">
     <h2 id="assigned-orders-title">ASSIGNED CUSTOMER ORDERS</h2>
@@ -170,6 +174,36 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;heigh
       </table>
     </div>
     <p id="schedule-notice" role="status"></p>
+  </div>
+  <div id="raw-inventory-view" hidden>
+    <p class="orders-description"><strong class="orders-data-label">SIMULATED DATA</strong><br>
+      Example stock for MON Plant · Line 35, grouped by the Steel Req code.</p>
+    <div class="orders-table-scroll" role="region" aria-label="Raw material inventory table" tabindex="0">
+      <table class="orders-table" aria-labelledby="assigned-orders-title">
+        <thead><tr><th scope="col">Steel Req</th><th scope="col" class="orders-quantity">Remaining Coils</th></tr></thead>
+        <tbody>
+          <tr><td>5.210AL40</td><td class="orders-quantity">8</td></tr>
+          <tr><td>5.210GA20</td><td class="orders-quantity">14</td></tr>
+          <tr><td>5.210GN20</td><td class="orders-quantity">5</td></tr>
+          <tr><td>5.210S422</td><td class="orders-quantity">3</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div id="finished-inventory-view" hidden>
+    <p class="inventory-total">Live simulator stock: <output id="finished-inventory-total"></output></p>
+    <p class="orders-description"><strong class="orders-data-label">SIMULATED DATA</strong><br>
+      Example stock by D35 product code. The simulator tracks live inventory as a single bundle total.</p>
+    <div class="orders-table-scroll" role="region" aria-label="Finished goods inventory table" tabindex="0">
+      <table class="orders-table" aria-labelledby="assigned-orders-title">
+        <thead><tr><th scope="col">D35 Product Code</th><th scope="col" class="orders-quantity">Example Pieces on Hand</th></tr></thead>
+        <tbody>
+          <tr><td>D3510GA</td><td class="orders-quantity">70</td></tr>
+          <tr><td>D3530GA</td><td class="orders-quantity">56</td></tr>
+          <tr><td>D3550GA10</td><td class="orders-quantity">35</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
   <footer class="orders-footer">
     <p id="orders-log-status" role="status"></p>
@@ -639,10 +673,13 @@ function drawRawMaterialCoil(x, y, z, width, radius, metal) {
   ctx.restore();
 }
 
+// On the far side of the operator walkway (LINE_Y + 2).
+const rawWarehouse = { x: -0.85, y: LINE_Y + 2.95, width: 3.60, depth: 1.85 };
+const rawWarehouseLabel = [rawWarehouse.x + 0.95, rawWarehouse.y + rawWarehouse.depth / 2, 2.40];
+const finishedWarehouseLabel = [WH_X0 + WH_COLS * WH_CW / 2, WH_Y0 + WH_CD / 2, 3.1];
+
 function drawRawMaterialWarehouse() {
-  // On the far side of the operator walkway (LINE_Y + 2).
-  const x = -0.85, y = LINE_Y + 2.95;
-  const width = 3.60, depth = 1.85;
+  const { x, y, width, depth } = rawWarehouse;
   const steel = ['#335879', '#172d45', '#24415c'];
   const deck = ['#1b3045', '#0e1927', '#152437'];
   const chock = ['#71562e', '#392a1b', '#514026'];
@@ -672,7 +709,7 @@ function drawRawMaterialWarehouse() {
 
   bx(x + width - 0.14, y + 0.05, 0.52, 0.09, depth - 0.1, 0.1, ...steel);
   bx(x + width - 0.14, y + depth - 0.14, 0.08, 0.09, 0.09, 0.56, ...steel);
-  lbl(x + 0.95, y + depth / 2, 2.40, 'RAW MATERIAL WAREHOUSE', '#4ab8e8', 9);
+  lbl(...rawWarehouseLabel, 'RAW MATERIAL WAREHOUSE', '#4ab8e8', 9);
 }
 
 // ---- UNCOILER (Yoder U150 style) ----
@@ -1074,7 +1111,7 @@ function drawWarehouse() {
     }
   }
 
-  lbl(WH_X0 + WH_COLS * WH_CW / 2, WH_Y0 + WH_CD / 2, 3.1,
+  lbl(...finishedWarehouseLabel,
     'FINISHED GOODS WAREHOUSE — DUCTMATE 35', '#4ab8e8', 10);
 }
 
@@ -1470,6 +1507,7 @@ function update(dt) {
   document.getElementById('p-cut').textContent = piecesCut;
   document.getElementById('p-bnd').textContent = bundlesPacked;
   document.getElementById('p-wh').textContent  = bundlesInWH;
+  if (activeOfficeView === 'finished') refreshFinishedInventory();
   document.getElementById('p-shipped').textContent = shipping.shipped;
   const dockStatus = {
     waiting: 'Awaiting order',
@@ -1566,6 +1604,11 @@ const ordersPanel = document.getElementById('assigned-orders');
 const officeActions = document.getElementById('office-actions');
 const scheduleTrigger = document.getElementById('office-schedule-trigger');
 const ordersView = document.getElementById('orders-view');
+const rawInventoryView = document.getElementById('raw-inventory-view');
+const finishedInventoryView = document.getElementById('finished-inventory-view');
+const rawInventoryTrigger = document.getElementById('raw-inventory-trigger');
+const finishedInventoryTrigger = document.getElementById('finished-inventory-trigger');
+const finishedInventoryTotal = document.getElementById('finished-inventory-total');
 const scheduleView = document.getElementById('schedule-view');
 const scheduleRows = document.getElementById('schedule-rows');
 const scheduleForm = document.getElementById('schedule-form');
@@ -1594,11 +1637,15 @@ let lastOfficeTrigger = ordersTrigger;
 const officeViews = {
   orders: { title: 'ASSIGNED CUSTOMER ORDERS', event: 'assigned_customer_orders' },
   schedule: { title: 'PRODUCTION SCHEDULE', event: 'production_schedule' },
+  raw: { title: 'RAW MATERIAL INVENTORY', event: 'raw_material_inventory' },
+  finished: { title: 'FINISHED GOODS INVENTORY', event: 'finished_goods_inventory' },
 };
 const officeTriggers = [
   [ordersTrigger, 'orders', 'office_label'],
   [monitorTrigger, 'orders', 'office_computer'],
   [scheduleTrigger, 'schedule', 'office_label'],
+  [rawInventoryTrigger, 'raw', 'warehouse_label'],
+  [finishedInventoryTrigger, 'finished', 'warehouse_label'],
 ];
 
 for (const order of assignedOrders) {
@@ -1726,6 +1773,18 @@ function positionOrdersTriggers() {
   officeActions.style.top = Math.max(58, labelPoint.y) + 'px';
   monitorTrigger.style.left = monitorPoint.x + 'px';
   monitorTrigger.style.top = monitorPoint.y + 'px';
+  for (const [button, anchor] of [[rawInventoryTrigger, rawWarehouseLabel],
+    [finishedInventoryTrigger, finishedWarehouseLabel]]) {
+    const point = iso(...anchor);
+    const margin = button.offsetWidth / 2 + 8;
+    button.style.left = Math.max(margin, Math.min(CV.width - margin, point.x)) + 'px';
+    button.style.top = (point.y - 19) + 'px';
+  }
+}
+
+function refreshFinishedInventory() {
+  const text = bundlesInWH + ' / ' + (WH_COLS * WH_LEVELS) + ' bundles';
+  if (finishedInventoryTotal.value !== text) finishedInventoryTotal.value = text;
 }
 
 function logOrdersEvent(eventType, source) {
@@ -1751,6 +1810,9 @@ function showOfficeView(view, source, opener) {
   ordersPanel.hidden = !view;
   ordersView.hidden = view !== 'orders';
   scheduleView.hidden = view !== 'schedule';
+  rawInventoryView.hidden = view !== 'raw';
+  finishedInventoryView.hidden = view !== 'finished';
+  if (view === 'finished') refreshFinishedInventory();
   for (const [button, buttonView] of officeTriggers) {
     button.setAttribute('aria-expanded', String(view === buttonView));
   }

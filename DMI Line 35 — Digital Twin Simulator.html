@@ -1127,7 +1127,6 @@ function drawShippingTruck() {
       bx(bandX, cargoY, cargoZ, 0.1, 0.48, BUNDLE_HEIGHT, '#e06010', '#b04800', '#cc5408');
     }
   }
-  lbl(x + 0.9, y + 2.4, 2.2, `ORDER #${shipping.order} · ${shipping.loaded}/${ORDER_SIZE}`, '#ffd67b', 10);
 }
 
 function drawForklift(lift, carrying, outbound) {
@@ -1170,7 +1169,6 @@ function drawDataChips() {
     {wx: RF_X+4.0,              wy: LINE_Y-1.7, wz:0, text:`SPD: ${(1.2*SPD).toFixed(1)} m/s`, col:'#4ad8ff'},
     {wx: FS_X+0.5,              wy: LINE_Y-1.7, wz:0, text:`CUT: ${piecesCut}`,                 col:'#4ad8ff'},
     {wx: BS_X+1.4,              wy: LINE_Y-1.7, wz:0, text:`${pcsAtStation}/${PIECES_PER_BUNDLE} pcs · PKD: ${bundlesPacked}`, col:'#5adc8a'},
-    {wx: WH_X0+WH_COLS*WH_CW/2,wy: WH_Y0-0.7,  wz:0, text:`WH: ${bundlesInWH}/${WH_COLS*WH_LEVELS}`, col:'#4ad8ff'},
   ];
   chips.forEach(chip => {
     const p = iso(chip.wx, chip.wy, chip.wz);

@@ -491,6 +491,101 @@ function drawPayoff() {
   lbl(x+0.9, y-0.4, 1.0, 'PAY-OFF TABLE', '#4ab8e8', 9);
 }
 
+// ---- RAW MATERIAL WAREHOUSE ----
+function drawRawMaterialCoil(x, y, z, width, radius, metal) {
+  // The coil axis runs along X. Project the Y/Z circles so the bore
+  // and wound edges follow the same perspective as the warehouse.
+  const face = iso(x + width, y, z);
+  const back = iso(x, y, z);
+  const ring = (center, r, start = 0, end = Math.PI * 2, connect = false) => {
+    const steps = Math.ceil((end - start) / (Math.PI / 24));
+    for (let i = 0; i <= steps; i++) {
+      const angle = start + (end - start) * i / steps;
+      const dy = r * Math.cos(angle);
+      const dz = r * Math.sin(angle);
+      const px = center.x - dy * TW / 2;
+      const py = center.y + dy * TH / 2 - dz * TH;
+      if (i === 0 && !connect) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+  };
+
+  ctx.save();
+  ctx.beginPath();
+  // Join the exposed end arcs at the tangents parallel to the axis.
+  const tangent = -Math.PI / 4;
+  ring(back, radius, tangent, tangent + Math.PI);
+  ring(face, radius, tangent + Math.PI, tangent + 2 * Math.PI, true);
+  ctx.closePath();
+  const wrap = ctx.createLinearGradient(back.x, back.y - radius * TH,
+    back.x - 0.25 * radius * TW, back.y + radius * TH);
+  wrap.addColorStop(0, metal.light);
+  wrap.addColorStop(0.45, metal.mid);
+  wrap.addColorStop(1, metal.dark);
+  ctx.fillStyle = wrap;
+  ctx.fill();
+
+  ctx.beginPath();
+  ring(face, radius * 0.37);
+  ctx.fillStyle = '#0a1420';
+  ctx.fill();
+  ctx.beginPath();
+  ring(face, radius);
+  ring(face, radius * 0.37);
+  const edge = ctx.createLinearGradient(face.x, face.y - radius * TH,
+    face.x, face.y + radius * TH);
+  edge.addColorStop(0, metal.light);
+  edge.addColorStop(1, metal.mid);
+  ctx.fillStyle = edge;
+  ctx.fill('evenodd');
+  ctx.strokeStyle = metal.dark;
+  ctx.lineWidth = 0.65;
+  ctx.stroke();
+  ctx.globalAlpha = 0.48;
+  for (const layer of [0.46, 0.56, 0.67, 0.79, 0.9]) {
+    ctx.beginPath();
+    ring(face, radius * layer);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawRawMaterialWarehouse() {
+  // On the far side of the operator walkway (LINE_Y + 2).
+  const x = -0.85, y = LINE_Y + 2.95;
+  const width = 3.60, depth = 1.85;
+  const steel = ['#335879', '#172d45', '#24415c'];
+  const deck = ['#1b3045', '#0e1927', '#152437'];
+  const chock = ['#71562e', '#392a1b', '#514026'];
+  const coils = [
+    { radius: 0.55, light: '#c8d3dc', mid: '#758c9e', dark: '#34485a' },
+    { radius: 0.48, light: '#a9bacd', mid: '#63788f', dark: '#27394b' },
+    { radius: 0.52, light: '#d3ccba', mid: '#98927f', dark: '#49463e' },
+  ];
+  bx(x, y, 0, width, depth, 0.08, ...deck);
+
+  // Low rails on three sides. The near edge is open to show the coils.
+  bx(x, y + 0.05, 0.52, width, 0.09, 0.1, ...steel);
+  bx(x + 0.05, y + 0.05, 0.52, 0.09, depth - 0.1, 0.1, ...steel);
+  for (const offset of [0.05, 1.18, 2.34, width - 0.14]) {
+    bx(x + offset, y + 0.05, 0.08, 0.09, 0.09, 0.69, ...steel);
+  }
+  bx(x + 0.05, y + depth - 0.14, 0.08, 0.09, 0.09, 0.56, ...steel);
+
+  coils.forEach((metal, index) => {
+    const coilX = x + 0.26 + index * 1.13;
+    const coilY = y + 0.95;
+    bx(coilX - 0.04, coilY - 0.54, 0.08, 0.85, 1.08, 0.06, ...steel);
+    bx(coilX, coilY - 0.39, 0.14, 0.78, 0.15, 0.16, ...chock);
+    drawRawMaterialCoil(coilX, coilY, 0.18 + metal.radius, 0.76, metal.radius, metal);
+    bx(coilX, coilY + 0.24, 0.14, 0.78, 0.15, 0.16, ...chock);
+  });
+
+  bx(x + width - 0.14, y + 0.05, 0.52, 0.09, depth - 0.1, 0.1, ...steel);
+  bx(x + width - 0.14, y + depth - 0.14, 0.08, 0.09, 0.09, 0.56, ...steel);
+  lbl(x + width / 2, y + depth / 2, 1.82, 'RAW MATERIAL WAREHOUSE', '#4ab8e8', 9);
+}
+
 // ---- UNCOILER (Yoder U150 style) ----
 // Real machine: large circular drive body + horizontal mandrel + steel coil
 function drawUncoiler() {
@@ -1336,6 +1431,7 @@ function render() {
     drawForklift(shipping.lift, shipping.lift.carrying, true);
   }
   drawBundlePackStation();
+  drawRawMaterialWarehouse();
   drawUncoiler();
   drawRF();
   drawStrip();
